@@ -9,7 +9,7 @@ These extensions include CrowdStrike's machine learning features.
 Falcon communicates with each of these extensions using a private set of interfaces which conform closely to Microsoft's COM architecture and are known internally as the Aviary APIs.
 This repo aims to document these APIs and provide example code for using a Falcon extension to scan data.
 
-> :warning: This repo is not complete and does contain inaccuracies that should be corrected but it provides a starting foundation for the next round of analysis work on Falcon.
+> :pencil2: This repo is functional but may contain some inaccuracies.
 
 ## Building
 
