@@ -20,7 +20,7 @@ The project does not rely on any library manager to allow it to be easily built 
 git clone --recurse-submodules https://github.com/SpecterOps/falcon-scanner.git
 cd falcon-scanner/builds
 cmake .. -A {Win32 | x64}
-cmake --build .
+cmake --build . --config Release
 ```
 
 The `examples` directory demonstrates how to use the library.
@@ -30,6 +30,6 @@ There is a `libfalcon.hpp` file that may be used as the SDK for the library.
 The `examples` directory demonstrates how to use the library.
 
 CMake will also build a `pyfalcon` Python module to allow for easy access to the API.
-For `pyfalcon` to successfully build, you must install the Python debug binaries (an optional component during installation).
+For `pyfalcon` to successfully build, you must install the Python debug binaries (an optional component during installation) and build using the `Release` config.
 Any non-free-threading version of Python 3.8 and higher should work, except for version 3.13.
 Version 3.13 introduced nonstandard file names when adding support for free-threaded binaries which [pybind11 never fully supported](https://github.com/pybind/pybind11/issues/5112).
