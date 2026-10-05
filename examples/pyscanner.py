@@ -3,17 +3,21 @@ import sys
 
 if len(sys.argv) < 3:
     print('{} <path to CsMl.dll> <path to PE file>'.format(sys.argv[0]))
-    sys.exit()
+    sys.exit(1)
 
 def MyLogger(message):
     r = message.static_analysis_response
-    if r != None:
-        print("Verdict: " + str(r.verdict))
-        print("Score  : " + str(r.score))
+    if r is not None:
+        print("Hash      : " + r.response_hash)
+        print("Verdict   : " + str(r.verdict))
+        print("Subverdict: " + str(r.subverdict))
+        print("Score     : " + str(r.score))
         
-servlet = pyfalcon.Servlet(sys.argv[1])
-servlet.logger = MyLogger
-
-file = pyfalcon.File(sys.argv[2])
-servlet.scan_file(file)
-del file
+try:
+    scanner = pyfalcon.Scanner(sys.argv[1])
+    scanner.logger = MyLogger
+    file = pyfalcon.File(sys.argv[2])
+    scanner.scan_file(file)
+except pyfalcon.FalconException as error:
+    print(str(error), file=sys.stderr)
+    sys.exit(1)

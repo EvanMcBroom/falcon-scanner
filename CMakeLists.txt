@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+set(PYBIND11_FINDPYTHON ON)
 include(requirements.cmake)
 
 add_library(falcon STATIC)
@@ -20,10 +21,11 @@ target_sources(falcon PRIVATE
     falcon.cpp
 )
 target_include_directories(falcon PUBLIC include)
+target_link_libraries(falcon PUBLIC bcrypt)
 
 pybind11_add_module(pyfalcon include/pyfalcon.hpp pyfalcon.cpp)
-target_link_libraries(pyfalcon PRIVATE falcon)
+target_link_libraries(pyfalcon PRIVATE falcon magic_enum::magic_enum)
 
 add_executable(scan_file)
 target_sources(scan_file PRIVATE examples/scan_file.cpp)
-target_link_libraries(scan_file PRIVATE falcon)
+target_link_libraries(scan_file PRIVATE falcon magic_enum::magic_enum)

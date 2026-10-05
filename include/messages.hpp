@@ -2,6 +2,7 @@
 #include <windows.h>
 
 #include <array>
+#include <cstddef>
 #include <stdint.h>
 
 namespace Aviary {
@@ -85,8 +86,8 @@ namespace Aviary {
     };
 
     struct _ARCHIVE_SCAN_FINALIZATION_REQUEST_DATA {
-        // Example Aviary struct. These should be defined
-        // for all message types.
+        // Example Aviary struct. These are fully defined
+        // by the vendor for all message types.
     };
 
     typedef struct _DEEPHASH_BLACKLIST_UPDATE_REQUEST_DATA {
@@ -125,11 +126,11 @@ namespace Aviary {
     static_assert(sizeof(RULE_ENGINE_LOAD_RULES_RESPONSE_DATA) == 12);
 
     typedef struct _STATIC_ANALYSIS_REQUEST_DATA {
-#define STATIC_ANALYSIS_FLAG_1             (0x01)
-#define STATIC_ANALYSIS_DEEPHASH_BLACKLIST (0x02) // Perform analysis using the Deephash Blacklist
-#define STATIC_ANALYSIS_DEEPHASH_EVIDENCE  (0x04) // Populate the DeephashEvidence array - Probably used to obtain content for the Deephash Blacklist
-#define STATIC_ANALYSIS_EXCERPT            (0x08)
-#define STATIC_ANALYSIS_FLAG_64            (0x40)
+#define STATIC_ANALYSIS_PUBLIC_PE_RESULT   0x01 // Whether to produce a VERDICT
+#define STATIC_ANALYSIS_DEEPHASH_BLACKLIST 0x02 // Deephash blacklist is an auxiliary raw-byte scorer
+#define STATIC_ANALYSIS_DEEPHASH_EVIDENCE  0x04 // Evidence is a 512-byte artifact
+#define STATIC_ANALYSIS_EXCERPT            0x08
+#define STATIC_ANALYSIS_POLICY_METADATA    0x40
         uint32_t Flags;
         std::array<uint8_t, 32> FileHash;
         uint64_t RequestTrackingId;
@@ -142,54 +143,81 @@ namespace Aviary {
     } STATIC_ANALYSIS_REQUEST_DATA;
 
     static_assert(sizeof(STATIC_ANALYSIS_REQUEST_DATA) == 88);
+    static_assert(offsetof(STATIC_ANALYSIS_REQUEST_DATA, TargetFileMapping) == 0x30);
+    static_assert(offsetof(STATIC_ANALYSIS_REQUEST_DATA, TargetFileSize) == 0x38);
 
+    inline constexpr uint32_t DefaultScanFlags = STATIC_ANALYSIS_PUBLIC_PE_RESULT | STATIC_ANALYSIS_POLICY_METADATA;
+
+    // Aviary gives scanned PEs an internal maliciousness verdict from 1-6.
+    // It will return the score when requested after swapping around the
+    // order of the numbers. Below is the public/swapped ordering of the
+    // numbers with names applied. These names are based on the words of
+    // estimative probability. The original names were not identified. The
+    // percentage needed to get a certain score will vary between model
+    // versions, but generally the top 3 scores will be >90%, the middle
+    // score will be roughly around 20%, and the bottom 3 will be <1%.
+    // clang-format off
     enum class VERDICT : uint8_t {
-        Benign = 0,
+                                          // Words of estimative probability:
+        Malicious = 3,                    // Certain
+        CertainlyMalicious = 2,           // Almost certain
+        ProbablyMalicious = 1,            // Probable
+        ChancesAboutEvenItsMalicious = 4, // Chances about even,
+        ProbablyNotMalicious = 6,         // Probably not
+        CertainlyNotMalicious = 5,        // Almost certainly not
+        NotMalicious = 0                  // "Impossible" (benign)
     };
+    // clang-format on
 
     typedef struct _STATIC_ANALYSIS_RESPONSE_DATA {
+        // The following are stable across versions.
         uint32_t Flags;
-        uint32_t ErrorCode;
-
-        uint8_t IsFileHashMismatch;
-        std::array<uint8_t, 32> ResponseFileHash;
+        uint32_t Status;
+        uint8_t HashMismatch;
+        std::array<uint8_t, 32> ResponseHash;
         uint32_t RequestTrackingTag;
-
         // Flag(1) || Flag(0x40)
-        uint8_t Verdict; // Possible values: 0, 1, 2, 3, 4, 5, 6
-        uint8_t SubVerdict; // Possible values: 0, 1, 2, 3, 4, 5, 6, 7, 8
+        uint8_t Verdict; // 0-6
+        uint8_t SubVerdict; // 0-8
+        std::array<uint8_t, 2> Reserved1;
         float Score;
-        std::array<uint8_t, 22412> _unk_56;
-        uint32_t _unk_22468;
-        uint32_t _unk_22472;
-        uint32_t _unk_22476;
-
-        uint32_t _unk_22480;
-        uint32_t _unk_22484;
-        uint8_t _unk_22488;
-        uint32_t _unk_22492;
-        uint8_t _unk_22496;
-
+        std::array<uint8_t, 22412> Reserved2;
+        uint32_t Reserved3;
+        uint32_t Reserved4;
+        uint32_t Reserved5;
+        uint32_t Reserved6;
+        uint32_t Reserved7;
+        uint8_t Reserved8;
+        uint32_t Reserved9;
+        uint8_t Reserved10;
         // Flag(1) or [Flag(8) && !Flag(1)]
-        uint64_t _unk_22504;
-        uint16_t _unk_22512;
-        uint32_t _unk_22516; // Default: 17
-
+        uint64_t Reserved11;
+        uint16_t Reserved12;
+        uint32_t Reserved13; // Default: 17
         // STATIC_ANALYSIS_DEEPHASH_BLACKLIST
         uint32_t BlacklistRevision; // Default: 0
         std::array<uint8_t, 32> BlacklistHash; // Only populated when BlacklistResult is 0 (indeterminate?)
         float BlacklistScore; // Default: 0.0
         uint32_t BlacklistResult; // Default: 1. If flag set, possible values: 0, 2, 4
-
         // STATIC_ANALYSIS_DEEPHASH_EVIDENCE
         std::array<uint8_t, 512> DeephashEvidence;
-        uint32_t _unk_23076; // Default: 0. If flag set, always 1 (0x100401 >> 20)
-        uint32_t _unk_23080; // Default: 1. If flag set, always 0
-
+        uint32_t Reserved14; // Default: 0. If flag set, always 1 (0x100401 >> 20)
+        uint32_t Reserved15; // Default: 1. If flag set, always 0
         std::array<uint8_t, 32> RequestFileHash;
         LARGE_INTEGER RequestSystemTime;
         uint64_t RequestTrackingId;
     } STATIC_ANALYSIS_RESPONSE_DATA;
 
+    inline constexpr size_t StaticAnalysisResponseResultSize = offsetof(STATIC_ANALYSIS_RESPONSE_DATA, Score) + sizeof(STATIC_ANALYSIS_RESPONSE_DATA::Score);
+
+    // The length of STATIC_ANALYSIS_RESPONSE_DATA changes between
+    // module versions, but was 23136 bytes for the audited version.
     static_assert(sizeof(STATIC_ANALYSIS_RESPONSE_DATA) == 23136);
+    // The fields through Score are stable across versions and can be used to get results.
+    static_assert(offsetof(STATIC_ANALYSIS_RESPONSE_DATA, Status) == 0x04);
+    static_assert(offsetof(STATIC_ANALYSIS_RESPONSE_DATA, HashMismatch) == 0x08);
+    static_assert(offsetof(STATIC_ANALYSIS_RESPONSE_DATA, ResponseHash) == 0x09);
+    static_assert(offsetof(STATIC_ANALYSIS_RESPONSE_DATA, Verdict) == 0x30);
+    static_assert(offsetof(STATIC_ANALYSIS_RESPONSE_DATA, SubVerdict) == 0x31);
+    static_assert(offsetof(STATIC_ANALYSIS_RESPONSE_DATA, Score) == 0x34);
 }

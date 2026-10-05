@@ -130,12 +130,13 @@ enum class CsBindingState {
     Bound = 2, // A call to CsBind completed
 };
 
-// Placeholder name
-enum class CsEntryArg1 : uint32_t {
+// These are guessed names. They may not be the vendor's names.
+enum class CsEntryOperation : uint32_t {
     Unknown1 = 1,
-    Unknown2 = 2,
-    Unknown3 = 3
+    Initialize = 2,
+    Shutdown = 3,
 };
+using CsEntryArg1 = CsEntryOperation;
 
 /// <summary>
 /// Extension Library Exports

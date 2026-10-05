@@ -1,15 +1,15 @@
 // The implementations of Falcon's Aviary API which
 // are designed to emulate Falcon itself.
-//
-// The Reset functions are possibly virtual deconstructors
-// in the original code.
 #pragma once
 #include "libaviary.hpp"
 #include "messages.hpp"
 #include <array>
+#include <exception>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <unordered_map>
+#include <vector>
 
 namespace std {
     template<>
@@ -20,7 +20,7 @@ namespace std {
 
     private:
         /// <summary>
-        /// The "alternate" form of the Fowler–Noll–Vo (fnv) hash function:
+        /// The "alternate" form of the Fowler-Noll-Vo (fnv) hash function:
         /// https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
         /// </summary>
         constexpr uint64_t fnv1a(uint8_t const key[8]) const {
@@ -71,7 +71,7 @@ struct TXMessage : public ComInterface {
             return E_INVALIDARG;
         }
         *ppvObject = nullptr;
-        if (riid == *ComIid || riid == __uuidof(Aviary::IXMessage)) {
+        if (riid == *ComIid || riid == __uuidof(Aviary::IXMessage) || riid == IID_IUnknown) {
             *ppvObject = this;
             this->AddRef();
             return S_OK;
@@ -84,10 +84,10 @@ struct TXMessage : public ComInterface {
     }
 
     ULONG STDMETHODCALLTYPE Release(void) {
-        uint32_t refCount = _InterlockedDecrement(&refCount);
-        if (refCount == 0)
+        auto remaining = _InterlockedDecrement(&this->refCount);
+        if (remaining == 0)
             delete this;
-        return refCount;
+        return remaining;
     }
 
     // ComInterface methods
@@ -236,6 +236,9 @@ struct XMessageService : public Aviary::IXMessageService {
     std::mutex mutex;
     std::unordered_map<std::array<uint8_t, 16>, XMessageHandlerEntry*> messageHandlers;
     std::vector<std::function<void(Aviary::IXMessage*)>> callbacks;
+    std::exception_ptr callbackError;
+    void ClearHandlers();
+    CComPtr<Aviary::IXMessageHandler> GetScanHandler();
 };
 
 struct XPlatform : public Aviary::IXPlatform {
@@ -281,3 +284,24 @@ struct XPlatformManagementService : public Aviary::IXPlatformManagementService {
     size_t(STDMETHODCALLTYPE* unknown1)(void*) = nullptr;
     void* unknown2 = nullptr; // Likely a this variable
 };
+
+namespace Falcon {
+    // A convenience class for C++ and Pybind11 to handle CsMl lifecycle management.
+    class Scanner {
+    public:
+        explicit Scanner(const std::wstring& path);
+        ~Scanner();
+
+        // Make non-copyable.
+        Scanner(const Scanner&) = delete;
+        Scanner& operator=(const Scanner&) = delete;
+
+        Aviary::STATIC_ANALYSIS_RESPONSE_DATA ScanFile(HANDLE file);
+        void SetLogger(std::function<void(Aviary::IXMessage*)> logger);
+
+    private:
+        // PImpl idiom for state.
+        struct State;
+        std::unique_ptr<State> state;
+    };
+}

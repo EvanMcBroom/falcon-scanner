@@ -4,12 +4,10 @@
 
 CrowdStrike's Falcon ships with a collection of extensions.
 These extensions allow the agent to process additional content at runtime such as files, network data, and memory acquisitions.
-These extensions include CrowdStrike's machine learning features.
+These extensions include `CsMl.dll`, CrowdStrike's machine learning features, which ships with any Falcon installation.
 
 Falcon communicates with each of these extensions using a private set of interfaces which conform closely to Microsoft's COM architecture and are known internally as the Aviary APIs.
-This repo aims to document these APIs and provide example code for using a Falcon extension to scan data.
-
-> :pencil2: This repo is functional but may contain some inaccuracies.
+This repo documents these APIs and provides example code for using the `CsMl.dll` extension to scan files. The `CsMl.dll` extension uses a self-contained ML model and can be used without a license or Internet access.
 
 ## Building
 
@@ -19,7 +17,7 @@ The project does not rely on any library manager to allow it to be easily built 
 ```
 git clone --recurse-submodules https://github.com/SpecterOps/falcon-scanner.git
 cd falcon-scanner/builds
-cmake .. -A {Win32 | x64}
+cmake .. -A x64
 cmake --build . --config Release
 ```
 
@@ -30,6 +28,28 @@ There is a `libfalcon.hpp` file that may be used as the SDK for the library.
 The `examples` directory demonstrates how to use the library.
 
 CMake will also build a `pyfalcon` Python module to allow for easy access to the API.
-For `pyfalcon` to successfully build, you must install the Python debug binaries (an optional component during installation) and build using the `Release` config.
-Any non-free-threading version of Python 3.8 and higher should work, except for version 3.13.
-Version 3.13 introduced nonstandard file names when adding support for free-threaded binaries which [pybind11 never fully supported](https://github.com/pybind/pybind11/issues/5112).
+Builds only currently support non-free-threaded Python installations.
+To choose a specific Python installation, supply `-DPython_EXECUTABLE=<path to python.exe>` when configuring CMake.
+
+## Running
+
+If you have a licensed copy of Falcon, the `CsMl.dll` extension will be in its installation directory.
+You may use it with the example C program like so:
+
+```bash
+scan_file.exe <path to CsMl.dll> <path to file>
+```
+
+For the Python script, first copy the built *.pyd file to the same directory as the script, then you may use it like so:
+
+```bash
+python pyscanner.py <path to CsMl.dll> <path to file>
+```
+
+## Acknowledgments
+
+This work was done as a collaboration with [Valdemar Carøe](https://github.com/bytewreck).
+I initially began the work in 2024.
+Valdemar picked up the project in 2025, providing C++ updates to make it functional.
+I merged their work in da13f98 and additional build and documentation updates and Python bindings.
+The work has since been functional, with only minor updates done for improving the internal code.

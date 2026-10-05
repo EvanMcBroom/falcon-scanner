@@ -1,3 +1,4 @@
+#pragma once
 #include "libfalcon.hpp"
 #include <exception>
 #include <pybind11/pybind11.h>
@@ -12,9 +13,12 @@ namespace PyFalcon {
     using Logger = std::function<void(Message message)>;
 
     struct StaticAnalysisResponse {
-        uint8_t Verdict;
-        uint8_t SubVerdict;
-        float Score;
+        Aviary::VERDICT Verdict{};
+        uint8_t SubVerdict{};
+        float Score{};
+        int32_t Status{};
+        bool HashMismatch{};
+        std::string ResponseHash;
     };
 
     class Exception : public std::exception {
@@ -33,8 +37,12 @@ namespace PyFalcon {
         File(const std::string& path);
         ~File();
 
+        // Make non-copyable.
+        File(const File&) = delete;
+        File& operator=(const File&) = delete;
+
     protected:
-        HANDLE handle;
+        HANDLE handle{ INVALID_HANDLE_VALUE };
     };
 
     class Message {
@@ -43,26 +51,22 @@ namespace PyFalcon {
         std::shared_ptr<StaticAnalysisResponse> GetStaticAnalysisResponse();
 
     private:
-        Aviary::IXMessage* message;
+        std::shared_ptr<StaticAnalysisResponse> response;
     };
 
     class Servlet {
     public:
         Servlet(const std::string& path);
         ~Servlet();
+
+        // Make non-copyable.
+        Servlet(const Servlet&) = delete;
+        Servlet& operator=(const Servlet&) = delete;
+
         void ScanFile(File& file);
         void SetLogger(Logger logger);
 
     private:
-        decltype(CsBind)* LazyCsBind;
-        decltype(CsEntry)* LazyCsEntry;
-        decltype(CsUnbind)* LazyCsUnbind;
-        Logger logger;
-        XMessageIoContext messageIoContext;
-        XPlatform platform;
-        XMessageService messageService;
-        XPlatformInformationService platformInformationService;
-        XPlatformManagementService platformManagementService;
-        HMODULE servlet{ nullptr };
+        std::unique_ptr<Falcon::Scanner> scanner;
     };
 }
