@@ -51,5 +51,5 @@ python pyscanner.py <path to CsMl.dll> <path to file>
 This work was done as a collaboration with [Valdemar Carøe](https://github.com/bytewreck).
 I initially began the work in 2024.
 Valdemar picked up the project in 2025, providing C++ updates to make it functional.
-I merged their work in da13f98 and additional build and documentation updates and Python bindings.
+I merged their work in [da13f98](https://github.com/EvanMcBroom/falcon-scanner/commit/da13f980731b98378eff28cdd3b26ff213c7563f) and additional build and documentation updates and Python bindings.
 The work has since been functional, with only minor updates done for improving the internal code.
