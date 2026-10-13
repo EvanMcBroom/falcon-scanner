@@ -178,7 +178,7 @@ namespace Aviary {
         uint32_t RequestTrackingTag;
         // Flag(1) || Flag(0x40)
         uint8_t Verdict; // 0-6
-        uint8_t SubVerdict; // 0-8
+        uint8_t SubVerdict; // 0-8: a second verdict based on a loaded ruleset
         std::array<uint8_t, 2> Reserved1;
         float Score;
         std::array<uint8_t, 22412> Reserved2;
